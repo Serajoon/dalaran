@@ -1,0 +1,34 @@
+### ignore Maven generated target folders ###
+target
+tmp
+
+### Package Files ###
+*.jar
+*.war
+
+!.mvn/wrapper/maven-wrapper.jar
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+/.idea
+/.mvn
+/target
+*.class
+.project
+.classpath
+.idea
+*.iws
+*.iml
+*.ipr
+*.log
+
+
+
