@@ -1,6 +1,8 @@
 package com.serajoon.dalaran.common.web.response;
 
 import com.github.pagehelper.PageInfo;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.http.HttpStatus;
 
 import java.util.HashMap;
@@ -12,6 +14,8 @@ import java.util.Map;
  *
  * @author hm 2019/1/6 22:35
  */
+@Getter
+@Setter
 public class ResponseResult {
 
     /**成功
@@ -151,27 +155,4 @@ public class ResponseResult {
         return this;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public void setCode(int code) {
-        this.code = code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public Object getData() {
-        return data;
-    }
-
-    public void setData(Object data) {
-        this.data = data;
-    }
 }
