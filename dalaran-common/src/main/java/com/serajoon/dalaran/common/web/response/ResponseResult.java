@@ -117,6 +117,17 @@ public class ResponseResult {
     }
 
     /**
+     * 普通失败提示信息
+     *
+     * @author hm 2019/1/6 22:43
+     */
+    public ResponseResult failed(String msg) {
+        this.code = FAILED;
+        this.message = msg;
+        return this;
+    }
+
+    /**
      * 参数验证失败使用
      *
      * @param message 错误信息

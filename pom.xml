@@ -10,6 +10,7 @@
     <version>1.0-SNAPSHOT</version>
     <modules>
         <module>dalaran-common</module>
+        <module>dalaran-support</module>
     </modules>
 
     <name>dalaran</name>
@@ -28,22 +29,28 @@
         <fastjson.version>1.2.47</fastjson.version>
         <guava.version>25.1-jre</guava.version>
         <rocketmq.version>4.2.0</rocketmq.version>
-        <swagger2.version>2.9.2</swagger2.version>
+        <swagger2.version>2.7.0</swagger2.version>
         <activiti.springboot.version>6.0.0</activiti.springboot.version>
-        <spring-cloud-oauth2>2.0.1.RELEASE</spring-cloud-oauth2>
         <servlet.version>2.5</servlet.version>
         <lombok.version>1.16.22</lombok.version>
         <caffeine.version>2.6.2</caffeine.version>
         <kotlin.version>1.3.0</kotlin.version>
         <jackson.module.kotlin>2.9.6</jackson.module.kotlin>
         <commons-pool2.version>2.4.2</commons-pool2.version>
-        <kafka.version>2.1.10.RELEASE</kafka.version>
+        <kafka.version>2.2.0.RELEASE</kafka.version>
+        <commons-fileupload.version>1.3.1</commons-fileupload.version>
+        <commons-net.version>3.3</commons-net.version>
         <!-- Maven plugins -->
         <maven-versions-plugin>2.3</maven-versions-plugin>
         <mybatis.generator.maven.plugin>1.3.2</mybatis.generator.maven.plugin>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -56,25 +63,14 @@
             <!--project-->
             <dependency>
                 <groupId>com.serajoon</groupId>
-                <artifactId>reading-common</artifactId>
-                <version>${project.parent.version}</version>
+                <artifactId>dalaran-common</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.serajoon</groupId>
-                <artifactId>reading-config</artifactId>
-                <version>${project.parent.version}</version>
+                <artifactId>dalaran-support</artifactId>
+                <version>${project.version}</version>
             </dependency>
-            <dependency>
-                <groupId>com.serajoon</groupId>
-                <artifactId>reading-dao</artifactId>
-                <version>${project.parent.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.serajoon</groupId>
-                <artifactId>reading-service</artifactId>
-                <version>${project.parent.version}</version>
-            </dependency>
-
             <!--Spring Boot-->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
@@ -89,21 +85,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-oauth2</artifactId>
-                <version>${spring-cloud-oauth2}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework.restdocs</groupId>
-                <artifactId>spring-restdocs-mockmvc</artifactId>
-            </dependency>
-            <dependency>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok</artifactId>
-                <version>${lombok.version}</version>
-                <scope>provided</scope>
-            </dependency>
+
             <!--redis-->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -152,7 +134,6 @@
                 <artifactId>activiti-spring-boot-starter-basic</artifactId>
                 <version>${activiti.springboot.version}</version>
             </dependency>
-
             <!--swagger-->
             <dependency>
                 <groupId>io.springfox</groupId>
@@ -263,6 +244,18 @@
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-quartz</artifactId>
+            </dependency>
+
+            <!--upload&download-->
+            <dependency>
+                <groupId>commons-fileupload</groupId>
+                <artifactId>commons-fileupload</artifactId>
+                <version>${commons-fileupload.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-net</groupId>
+                <artifactId>commons-net</artifactId>
+                <version>${commons-net.version}</version>
             </dependency>
             <!-- ****************************** -->
         </dependencies>

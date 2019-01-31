@@ -48,4 +48,15 @@ public abstract class MyDateTimeUtils {
         return LocalDateTime.now().format(DATETIME_FORMATTER);
     }
 
+    public static int getCurrentYear(){
+        return LocalDateTime.now().getYear();
+    }
+
+    public static int getCurrentMonth(){
+        return LocalDateTime.now().getMonthValue();
+    }
+
+    public static int getCurrentDay(){
+        return LocalDateTime.now().getDayOfMonth();
+    }
 }

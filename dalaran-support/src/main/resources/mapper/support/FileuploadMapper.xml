@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.serajoon.dalaran.support.ftp.dao.FileuploadDao" >
+
+  <resultMap id="BaseResultMap" type="com.serajoon.dalaran.support.ftp.model.Fileupload" >
+    <id column="id" property="id" jdbcType="VARCHAR" />
+    <result column="file_old_name" property="fileOldName" jdbcType="VARCHAR" />
+    <result column="file_new_name" property="fileNewName" jdbcType="VARCHAR" />
+    <result column="contextPath" property="contextPath" jdbcType="VARCHAR" />
+    <result column="contenttype" property="contentType" jdbcType="VARCHAR" />
+    <result column="fileType" property="fileType" jdbcType="VARCHAR" />
+    <result column="location" property="location" jdbcType="VARCHAR" />
+    <result column="servertype" property="serverType" jdbcType="INTEGER" />
+    <result column="userid" property="userId" jdbcType="VARCHAR" />
+    <result column="userip" property="userIp" jdbcType="VARCHAR" />
+    <result column="create_time" property="createTime" jdbcType="TIMESTAMP" />
+  </resultMap>
+  <sql id="Base_Column_List" >
+    id, file_old_name, file_new_name, contextPath, contentype, fileType, location, servertype,
+    userid, userip, create_time
+  </sql>
+
+  <select id="findById" resultMap="BaseResultMap" parameterType="java.lang.String" >
+    select
+    <include refid="Base_Column_List" />
+    from fileupload
+    where id = #{id}
+  </select>
+  <delete id="deleteById" parameterType="java.lang.String" >
+    delete from fileupload
+    where id = #{id}
+  </delete>
+  <insert id="insert" parameterType="com.serajoon.dalaran.support.ftp.model.Fileupload" >
+    insert into fileupload (id,file_old_name, file_new_name, contextPath,
+      contenttype, fileType, location, 
+      servertype, userid, userip, 
+      create_time)
+    values (#{id},#{fileOldName}, #{fileNewName}, #{contextPath},
+      #{contentType}, #{fileType}, #{location},
+      #{serverType}, #{userId}, #{userIp},
+      #{createTime})
+  </insert>
+</mapper>
