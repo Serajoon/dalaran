@@ -70,6 +70,11 @@
             </dependency>
             <dependency>
                 <groupId>com.serajoon</groupId>
+                <artifactId>dalaran-config</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.serajoon</groupId>
                 <artifactId>dalaran-support</artifactId>
                 <version>${project.version}</version>
             </dependency>

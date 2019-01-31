@@ -1,4 +1,4 @@
-package com.serajoon.config.web.swagger;
+package com.serajoon.dalaran.config.web.swagger;
 
 import lombok.Getter;
 import lombok.Setter;

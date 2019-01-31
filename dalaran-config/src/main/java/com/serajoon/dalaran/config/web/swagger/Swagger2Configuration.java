@@ -1,4 +1,4 @@
-package com.serajoon.config.web.swagger;
+package com.serajoon.dalaran.config.web.swagger;
 
 import io.swagger.annotations.Api;
 import org.springframework.beans.factory.annotation.Autowired;
