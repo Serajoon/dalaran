@@ -2,7 +2,7 @@ package com.serajoon.dalaran.support.ftp.service;
 
 
 import com.serajoon.dalaran.common.constants.MyCharset;
-import com.serajoon.dalaran.common.util.MyHttpUtils;
+import com.serajoon.dalaran.common.util.MyNetUtils;
 import com.serajoon.dalaran.common.util.MyStringUtils;
 import com.serajoon.dalaran.common.web.response.ResponseResult;
 import com.serajoon.dalaran.support.ftp.config.FTPProperties;
@@ -70,7 +70,7 @@ public class FTPService {
      */
     public boolean isReachable(FTPClient ftpClient) {
         boolean result = false;
-        if (MyHttpUtils.isHostConnectable(ftpProperties.getHost(), ftpProperties.getPort())) {//服务可用
+        if (MyNetUtils.isIpAndPortReachable(ftpProperties.getHost(), ftpProperties.getPort())) {//服务可用
             try {
                 if (!ftpClient.isConnected()) {
                     ftpClient.connect(ftpProperties.getHost(), ftpProperties.getPort());
