@@ -12,6 +12,7 @@
         <module>dalaran-common</module>
         <module>dalaran-support</module>
         <module>dalaran-config</module>
+        <module>dalaran-mbg</module>
     </modules>
 
     <name>dalaran</name>
@@ -26,7 +27,7 @@
         <mybatis.pagehelper>1.2.5</mybatis.pagehelper>
         <mybatis.generator>1.3.2</mybatis.generator>
         <mysql.connector>5.1.26</mysql.connector>
-        <druid.version>1.1.12</druid.version>
+        <druid.version>1.1.10</druid.version>
         <fastjson.version>1.2.47</fastjson.version>
         <guava.version>25.1-jre</guava.version>
         <rocketmq.version>4.2.0</rocketmq.version>
@@ -76,6 +77,11 @@
             <dependency>
                 <groupId>com.serajoon</groupId>
                 <artifactId>dalaran-support</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.serajoon</groupId>
+                <artifactId>dalaran-mbg</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <!--Spring Boot-->
@@ -129,18 +135,19 @@
                 <version>${mysql.connector}</version>
                 <!--<scope>runtime</scope>-->
             </dependency>
-            <dependency>
-                <groupId>com.alibaba</groupId>
-                <artifactId>druid</artifactId>
-                <version>${druid.version}</version>
-            </dependency>
+
+            <!--<dependency>-->
+                <!--<groupId>com.alibaba</groupId>-->
+                <!--<artifactId>druid</artifactId>-->
+                <!--<version>${druid.version}</version>-->
+            <!--</dependency>-->
 
             <!--activiti-->
-            <dependency>
-                <groupId>org.activiti</groupId>
-                <artifactId>activiti-spring-boot-starter-basic</artifactId>
-                <version>${activiti.springboot.version}</version>
-            </dependency>
+            <!--<dependency>-->
+                <!--<groupId>org.activiti</groupId>-->
+                <!--<artifactId>activiti-spring-boot-starter-basic</artifactId>-->
+                <!--<version>${activiti.springboot.version}</version>-->
+            <!--</dependency>-->
             <!--swagger-->
             <dependency>
                 <groupId>io.springfox</groupId>
@@ -332,14 +339,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
