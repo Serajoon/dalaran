@@ -1,8 +1,11 @@
 package com.serajoon.dalaran.common.util;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 public abstract class MyDateTimeUtils {
     public static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -58,5 +61,33 @@ public abstract class MyDateTimeUtils {
 
     public static int getCurrentDay(){
         return LocalDateTime.now().getDayOfMonth();
+    }
+
+    /**
+     * Date类型转时间字符串字符串yyyy-MM-dd
+     * @param   date
+     * @return  string
+     * @author  hanmeng1
+     * @since  2019/2/16 10:02
+     */
+    public static String dateToDateString(Date date){
+        Instant instant = date.toInstant();
+        ZoneId zoneId = ZoneId.systemDefault();
+        LocalDate localDate = instant.atZone(zoneId).toLocalDate();
+        return localDate.format(DATE_FORMATTER);
+    }
+
+    /**
+     * Date类型转时间字符串字符串 yyyy-MM-dd HH:mm:ss
+     * @param   date
+     * @return  string
+     * @author  hanmeng1
+     * @since  2019/2/16 10:02
+     */
+    public static String dateToTimeString(Date date){
+        Instant instant = date.toInstant();
+        ZoneId zoneId = ZoneId.systemDefault();
+        LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
+        return localDateTime.format(DATETIME_FORMATTER);
     }
 }

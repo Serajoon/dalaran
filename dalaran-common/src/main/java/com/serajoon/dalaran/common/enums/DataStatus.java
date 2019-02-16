@@ -6,9 +6,8 @@ package com.serajoon.dalaran.common.enums;
  * @author hm 2019/1/15 10:42
  */
 public enum DataStatus {
-    NORMAL(1, "正常"),
-    HIDE(0, "隐藏"),
-    DELETE(-1, "删除");
+    NORMAL(1, "有效"),
+    HIDE(0, "无效");
 
     private final int value;
     private final String desc;
