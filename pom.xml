@@ -13,6 +13,7 @@
         <module>dalaran-support</module>
         <module>dalaran-config</module>
         <module>dalaran-mbg</module>
+        <module>dalaran-log</module>
     </modules>
 
     <name>dalaran</name>
