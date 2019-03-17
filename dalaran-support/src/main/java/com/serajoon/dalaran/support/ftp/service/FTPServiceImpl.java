@@ -1,7 +1,10 @@
 package com.serajoon.dalaran.support.ftp.service;
 
-
+import com.google.common.base.Joiner;
 import com.serajoon.dalaran.common.constants.MyCharset;
+import com.serajoon.dalaran.common.enums.FileUpLoadEnum;
+import com.serajoon.dalaran.common.generator.IdGenerator;
+import com.serajoon.dalaran.common.util.MyDateTimeUtils;
 import com.serajoon.dalaran.common.util.MyNetUtils;
 import com.serajoon.dalaran.common.util.MyStringUtils;
 import com.serajoon.dalaran.common.web.response.ResponseResult;
@@ -9,17 +12,24 @@ import com.serajoon.dalaran.support.ftp.config.FTPProperties;
 import com.serajoon.dalaran.support.ftp.dao.FileuploadDao;
 import com.serajoon.dalaran.support.ftp.model.Fileupload;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * FTP service
@@ -30,12 +40,13 @@ import java.io.InputStream;
 @Service
 @Transactional(rollbackFor = Exception.class)
 @Slf4j
-public class FTPService {
+public class FTPServiceImpl implements IFTPService{
 
     private static final String FTP_PATH_SEPARATOR = "/";
 
     @Resource
     private FTPProperties ftpProperties;
+
 
 
     @Resource
@@ -94,8 +105,7 @@ public class FTPService {
      * @param inputStream 输入文件流
      * @return ResponseResult
      */
-    @Transactional
-    public ResponseResult upload(Fileupload fileupload, InputStream inputStream) {
+    public ResponseResult doUpload(Fileupload fileupload, InputStream inputStream) {
         FTPClient ftpClient = ftpClient();
         if (!isReachable(ftpClient)) {
             return ResponseResult.build().failed("连接FTP服务失败");
@@ -121,14 +131,38 @@ public class FTPService {
         return result;
     }
 
+    public List<ResponseResult> upload(List<MultipartFile> multipartFileList, HttpServletRequest request){
+        return multipartFileList.parallelStream()
+                .filter(t -> org.springframework.util.StringUtils.hasLength(t.getOriginalFilename()))
+                .map(multipartFile -> {
+                    Fileupload fileupload = getFileupload(multipartFile, request);
+                    ResponseResult responseResult = null;
+                    try (InputStream inputStream = multipartFile.getInputStream()) {
+                        responseResult = doUpload(fileupload, inputStream);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    return responseResult;
+                }).collect(Collectors.toList());
+    }
 
-    public InputStream download(String pathname, String filename) {
+    /**
+     *
+     * @param   pathname 路径名
+     * @param   filename 文件名
+     * @param   realName 原文件名
+     * @return  response HttpServletResponse
+     * @author  hanmeng1
+     * @since  2019/2/21 19:11
+     */
+    public void download(String pathname, String filename,String realName, HttpServletResponse response) throws IOException {
+        BufferedInputStream bufferedInputStream = null;
+        BufferedOutputStream bufferedOutputStream = null;
+        InputStream inputStream = null;
         FTPClient ftpClient = ftpClient();
         if (!isReachable(ftpClient)) {
             log.error("连接FTP服务失败");
-            return null;
         }
-        InputStream inputStream = null;
         try {
             log.info("开始下载文件{}/{}", pathname, filename);
             ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
@@ -140,14 +174,32 @@ public class FTPService {
                     inputStream = ftpClient.retrieveFileStream(pathname + "/" + filename);
                 }
             }
-            log.info("下载文件{}/{}成功", pathname, filename);
+            if (inputStream != null) {
+                bufferedInputStream = new BufferedInputStream(inputStream);
+                bufferedOutputStream = new BufferedOutputStream(response.getOutputStream());
+                response.setHeader("Content-Disposition", "attachment;filename=" + realName);
+                response.setContentType("application/octet-stream;charset=utf-8");
+                byte[] bytes = new byte[1024];
+                int n;
+                while ((n = bufferedInputStream.read(bytes)) != -1) {
+                    bufferedOutputStream.write(bytes, 0, n);
+                }
+            }
         } catch (Exception e) {
             log.error("下载文件失败");
             e.printStackTrace();
         } finally {
+            if (bufferedInputStream != null) {
+                bufferedInputStream.close();
+            }
+            if (bufferedOutputStream != null) {
+                bufferedOutputStream.close();
+            }
+            if(inputStream!=null){
+                inputStream.close();
+            }
             releaseFTPClient(ftpClient);
         }
-        return inputStream;
     }
 
     /**
@@ -276,5 +328,34 @@ public class FTPService {
                 e.printStackTrace();
             }
         }
+    }
+
+
+    private Fileupload getFileupload(MultipartFile multipartFile, HttpServletRequest request) {
+        Fileupload fileupload = new Fileupload();
+        String contextPath = request.getContextPath().replaceFirst("/", "");//根路径名
+        String contentType = multipartFile.getContentType();
+        String originalFilename = multipartFile.getOriginalFilename();//获取文件名
+        String suffixName = originalFilename.substring(originalFilename.lastIndexOf("."));
+        String fileType = FilenameUtils.getExtension(originalFilename);//获取文件类型
+        String newFileName = IdGenerator.randomUUID() + suffixName;//生成新的文件名
+        String remoteAddr = request.getRemoteAddr();
+        String ftpPath = Joiner.on("/").join(
+                ftpProperties.getPath(),
+                MyDateTimeUtils.getCurrentYear(),
+                MyDateTimeUtils.getCurrentMonth(),
+                MyDateTimeUtils.getCurrentDay());
+        fileupload.setContentType(contentType);
+        fileupload.setContextPath(contextPath);
+        fileupload.setFileType(fileType);
+        fileupload.setFileOldName(originalFilename);
+        fileupload.setFileNewName(newFileName);
+        fileupload.setCreateTime(MyDateTimeUtils.getCurrentDateTimeStr());
+        fileupload.setUserId("");
+        fileupload.setUserIp(remoteAddr);
+        fileupload.setLocation(FilenameUtils.normalize(ftpPath, true));
+        fileupload.setServerType(FileUpLoadEnum.FTP.value());
+        fileupload.setId(IdGenerator.randomUUID());
+        return fileupload;
     }
 }

@@ -1,0 +1,40 @@
+server:
+  port: 8000
+  servlet:
+    context-path: /${spring.application.name}
+
+spring:
+  application:
+    name: dalaran
+
+###################################
+# 自定义-日志配置
+logging:
+  config: classpath:log/logback-spring.xml
+  level:
+    root: debug
+  file:
+    max-size: 200MB
+    max-history: 30
+    max-total-size: 2GB
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} --- %msg%n'
+    file:    '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} --- %msg%n'
+  log-home: ./MYLOG/${spring.application.name}
+
+# 自定义-swagger配置
+swagger:
+  enabled: true
+  classAnnotation: false
+  title: 后端接口API
+  description: 后端模块API描述
+  version: 1.0
+
+# 自定义-FTP配置
+ftp:
+  host: 10.16.6.117
+  port: 21
+  path: ${server.servlet.context-path}
+  username: ftp-1
+  password: 123456
+  timeout: 200
