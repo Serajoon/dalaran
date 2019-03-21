@@ -11,6 +11,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * 附件上传下载接口
+ * 一定要关闭防火墙
+ */
 @RestController
 @RequestMapping("/api/support")
 public class FTPController {
@@ -25,7 +29,7 @@ public class FTPController {
      * @param request           Request
      * @return List<ResponseResult> 返回结果
      */
-    @PostMapping(value = "/ftps")
+    @PostMapping(value = "/ftps",consumes = "multipart/*", headers = "content-type=multipart/form-data", produces = "application/json; charset=utf-8")
     @ResponseBody
     public List<ResponseResult> upload(@RequestParam("file") List<MultipartFile> multipartFileList, HttpServletRequest request) {
         return ftpService.upload(multipartFileList,request);

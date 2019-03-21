@@ -47,7 +47,7 @@
         <javaClientGenerator type="XMLMAPPER" targetPackage="tmp.dao"
                              targetProject="dalaran-mbg/src/main/java"/>
         <!--生成全部表tableName=% 生成以parana开头的 parana_% -->
-        <table tableName="parana_shops"
+        <table tableName="sys_file_business"
                enableCountByExample="false"
                enableUpdateByExample="false"
                enableDeleteByExample="false"
