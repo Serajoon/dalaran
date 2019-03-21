@@ -6,7 +6,7 @@ import cn.afterturn.easypoi.excel.export.styler.IExcelExportStyler;
 import org.apache.poi.ss.usermodel.*;
 
 /**
- * @author wxlbobo * @date 2018/9/12
+ * 灰色样式
  */
 public class ExcelStyleGray implements IExcelExportStyler {
     private static final short STRING_FORMAT = (short) BuiltinFormats.getBuiltinFormat("TEXT");
