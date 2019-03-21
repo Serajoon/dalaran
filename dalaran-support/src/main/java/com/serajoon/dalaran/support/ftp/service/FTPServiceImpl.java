@@ -28,6 +28,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -177,7 +178,7 @@ public class FTPServiceImpl implements IFTPService{
             if (inputStream != null) {
                 bufferedInputStream = new BufferedInputStream(inputStream);
                 bufferedOutputStream = new BufferedOutputStream(response.getOutputStream());
-                response.setHeader("Content-Disposition", "attachment;filename=" + realName);
+                response.setHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(realName, MyCharset.DEFAULT_CHARSET_TEXT));
                 response.setContentType("application/octet-stream;charset=utf-8");
                 byte[] bytes = new byte[1024];
                 int n;
