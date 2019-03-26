@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -41,13 +42,12 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 @Slf4j
-public class FTPServiceImpl implements IFTPService{
+public class FTPServiceImpl implements IFTPService {
 
     private static final String FTP_PATH_SEPARATOR = "/";
 
     @Resource
     private FTPProperties ftpProperties;
-
 
 
     @Resource
@@ -80,7 +80,7 @@ public class FTPServiceImpl implements IFTPService{
      * @return boolean
      * @author hm
      */
-    public boolean isReachable(FTPClient ftpClient) {
+    public boolean reachable(FTPClient ftpClient) {
         boolean result = false;
         if (MyNetUtils.isIpAndPortReachable(ftpProperties.getHost(), ftpProperties.getPort())) {//服务可用
             try {
@@ -88,7 +88,9 @@ public class FTPServiceImpl implements IFTPService{
                     ftpClient.connect(ftpProperties.getHost(), ftpProperties.getPort());
                     ftpClient.login(ftpProperties.getUsername(), ftpProperties.getPassword());
                 }
-                result = true;
+                if (ftpClient.isConnected()) {
+                    result = true;
+                }
             } catch (IOException e) {
                 log.error("登录FTP失败");
                 e.printStackTrace();
@@ -108,7 +110,7 @@ public class FTPServiceImpl implements IFTPService{
      */
     public ResponseResult doUpload(Fileupload fileupload, InputStream inputStream) {
         FTPClient ftpClient = ftpClient();
-        if (!isReachable(ftpClient)) {
+        if (Objects.isNull(ftpClient) || !reachable(ftpClient)) {
             return ResponseResult.build().failed("连接FTP服务失败");
         }
         ResponseResult result;
@@ -128,11 +130,18 @@ public class FTPServiceImpl implements IFTPService{
             result = ResponseResult.build().failed("上传FTP失败");
         } finally {
             releaseFTPClient(ftpClient);
+            if(Objects.nonNull(inputStream)){
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
         return result;
     }
 
-    public List<ResponseResult> upload(List<MultipartFile> multipartFileList, HttpServletRequest request){
+    public List<ResponseResult> upload(List<MultipartFile> multipartFileList, HttpServletRequest request) {
         return multipartFileList.parallelStream()
                 .filter(t -> org.springframework.util.StringUtils.hasLength(t.getOriginalFilename()))
                 .map(multipartFile -> {
@@ -148,20 +157,19 @@ public class FTPServiceImpl implements IFTPService{
     }
 
     /**
-     *
-     * @param   pathname 路径名
-     * @param   filename 文件名
-     * @param   realName 原文件名
-     * @return  response HttpServletResponse
-     * @author  hanmeng1
-     * @since  2019/2/21 19:11
+     * @param pathname 路径名
+     * @param filename 文件名
+     * @param realName 原文件名
+     * @return response HttpServletResponse
+     * @author hanmeng1
+     * @since 2019/2/21 19:11
      */
-    public void download(String pathname, String filename,String realName, HttpServletResponse response) throws IOException {
+    public void download(String pathname, String filename, String realName, HttpServletResponse response) throws IOException {
         BufferedInputStream bufferedInputStream = null;
         BufferedOutputStream bufferedOutputStream = null;
         InputStream inputStream = null;
         FTPClient ftpClient = ftpClient();
-        if (!isReachable(ftpClient)) {
+        if (!reachable(ftpClient)) {
             log.error("连接FTP服务失败");
         }
         try {
@@ -196,7 +204,7 @@ public class FTPServiceImpl implements IFTPService{
             if (bufferedOutputStream != null) {
                 bufferedOutputStream.close();
             }
-            if(inputStream!=null){
+            if (inputStream != null) {
                 inputStream.close();
             }
             releaseFTPClient(ftpClient);
@@ -303,7 +311,7 @@ public class FTPServiceImpl implements IFTPService{
     public ResponseResult deleteFile(String id, String pathname, String filename) {
         ResponseResult responseResult;
         FTPClient ftpClient = ftpClient();
-        if (!isReachable(ftpClient)) {
+        if (!reachable(ftpClient)) {
             responseResult = ResponseResult.build().failed("连接FTP服务失败");
         }
         try {
