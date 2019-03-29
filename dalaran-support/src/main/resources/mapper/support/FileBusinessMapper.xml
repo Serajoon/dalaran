@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.serajoon.dalaran.support.ftp.dao.FileBusinessDao" >
+
+  <resultMap id="BaseResultMap" type="com.serajoon.dalaran.support.ftp.model.FileBusiness" >
+    <result column="id" property="id" jdbcType="VARCHAR" />
+    <result column="business_type" property="businessType" jdbcType="INTEGER" />
+    <result column="business_name" property="businessName" jdbcType="VARCHAR" />
+    <result column="business_id" property="businessId" jdbcType="VARCHAR" />
+    <result column="business_id" property="businessId" jdbcType="VARCHAR" />
+    <result column="file_id" property="fileId" jdbcType="VARCHAR" />
+  </resultMap>
+
+
+
+  <insert id="insert" parameterType="com.serajoon.dalaran.support.ftp.model.FileBusiness" >
+    insert into sys_file_business
+    <trim prefix="(" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        id,
+      </if>
+      <if test="businessType != null" >
+        business_type,
+      </if>
+      <if test="businessName != null" >
+        business_name,
+      </if>
+      <if test="businessId != null" >
+        business_id,
+      </if>
+      <if test="fileId != null" >
+        file_id,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="businessType != null" >
+        #{businessType,jdbcType=INTEGER},
+      </if>
+      <if test="businessName != null" >
+        #{businessName,jdbcType=VARCHAR},
+      </if>
+      <if test="businessId != null" >
+        #{businessId,jdbcType=VARCHAR},
+      </if>
+      <if test="fileId != null" >
+        #{fileId,jdbcType=VARCHAR},
+      </if>
+    </trim>
+  </insert>
+
+
+  <insert id="insertList" parameterType="list">
+    INSERT INTO sys_file_business (id,business_type,business_name, business_id, file_id)
+    VALUES
+    <foreach collection="list" separator="," item="item" index="index">
+      (#{item.id},
+      #{item.businessType},
+      #{item.businessName},
+      #{item.businessId},
+      #{item.fileId}
+      )
+    </foreach>
+  </insert>
+
+
+  <delete id="delete" parameterType="com.serajoon.dalaran.support.ftp.dto.FtpDTO">
+    delete from sys_file_business
+    <where>
+      <!--根据业务主键删除-->
+      <if test="businessId != null">
+        business_id=#{businessId}
+      </if>
+      <if test="businessType != null">
+        business_type=#{businessType}
+      </if>
+      <if test="fileId != null">
+        and file_id=#{fileId}
+      </if>
+      <if test="fileIdList != null and fileIdList.size>0">
+        and file_id in
+        <foreach collection="fileIdList" item="fileId" index="index" open="(" close=")" separator=",">
+          #{fileId}
+        </foreach>
+      </if>
+    </where>
+  </delete>
+
+  <select id="findFileIdByBussinessId" resultType="String">
+    SELECT
+      t.file_id
+    FROM
+      sys_file_business t
+    WHERE t.business_id =#{businessId} and t.business_type=#{type}
+  </select>
+
+</mapper>

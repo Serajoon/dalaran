@@ -1,4 +1,4 @@
-package com.serajoon.dalaran.support.ftp.service;
+package com.serajoon.dalaran.support.ftp.service.impl;
 
 import com.google.common.base.Joiner;
 import com.serajoon.dalaran.common.constants.MyCharset;
@@ -11,6 +11,8 @@ import com.serajoon.dalaran.common.web.response.ResponseResult;
 import com.serajoon.dalaran.support.ftp.config.FTPProperties;
 import com.serajoon.dalaran.support.ftp.dao.FileuploadDao;
 import com.serajoon.dalaran.support.ftp.model.Fileupload;
+import com.serajoon.dalaran.support.ftp.pool.FTPClientPool;
+import com.serajoon.dalaran.support.ftp.service.IFTPService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.net.ftp.FTP;
@@ -19,6 +21,8 @@ import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
@@ -28,6 +32,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.ConnectException;
 import java.net.URLEncoder;
 import java.util.List;
 import java.util.Objects;
@@ -38,7 +43,6 @@ import java.util.stream.Collectors;
  *
  * @author hm 2019/1/29 20:00
  */
-//TODO 提示信息
 @Service
 @Transactional(rollbackFor = Exception.class)
 @Slf4j
@@ -46,13 +50,18 @@ public class FTPServiceImpl implements IFTPService {
 
     private static final String FTP_PATH_SEPARATOR = "/";
 
+    private static final String CONTENTTYPE = "application/octet-stream;charset=utf-8";
+
     @Resource
     private FTPProperties ftpProperties;
-
 
     @Resource
     private FileuploadDao fileuploadDao;
 
+    @Resource
+    private FTPClientPool ftpPool;
+
+    @Deprecated
     public FTPClient ftpClient() {
         FTPClient ftpClient = new FTPClient();
         ftpClient.setControlEncoding(MyCharset.DEFAULT_CHARSET_TEXT);
@@ -77,12 +86,13 @@ public class FTPServiceImpl implements IFTPService {
     /**
      * 判断FTP服务是否可用
      *
-     * @return boolean
-     * @author hm
+     * @return boolean 是否可用
+     * @author hanmeng
      */
     public boolean reachable(FTPClient ftpClient) {
         boolean result = false;
-        if (MyNetUtils.isIpAndPortReachable(ftpProperties.getHost(), ftpProperties.getPort())) {//服务可用
+        //服务可用性判断
+        if (MyNetUtils.isIpAndPortReachable(ftpProperties.getHost(), ftpProperties.getPort())) {
             try {
                 if (!ftpClient.isConnected()) {
                     ftpClient.connect(ftpProperties.getHost(), ftpProperties.getPort());
@@ -109,41 +119,42 @@ public class FTPServiceImpl implements IFTPService {
      * @return ResponseResult
      */
     public ResponseResult doUpload(Fileupload fileupload, InputStream inputStream) {
-        FTPClient ftpClient = ftpClient();
-        if (Objects.isNull(ftpClient) || !reachable(ftpClient)) {
-            return ResponseResult.build().failed("连接FTP服务失败");
-        }
         ResponseResult result;
-        String pathname = fileupload.getLocation();
-        try (BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream)) {
-            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
-            createDirecroty(pathname, ftpClient);
-            ftpClient.makeDirectory(pathname);
-            ftpClient.changeWorkingDirectory(pathname);
-            ftpClient.storeFile(fileupload.getFileNewName(), bufferedInputStream);
-            ftpClient.logout();
-            fileuploadDao.insert(fileupload);
-            result = ResponseResult.build().success(fileupload, "上传成功");
+        FTPClient ftpClient = null;
+        try {
+            ftpClient = ftpPool.borrowObject();
+            System.out.println(ftpClient);
+            if (!reachable(ftpClient)) {
+                throw new ConnectException("连接FTP服务失败");
+            }
+            String pathname = fileupload.getLocation();
+            try (BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream)) {
+                ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+                createDirecroty(pathname, ftpClient);
+                ftpClient.makeDirectory(pathname);
+                ftpClient.changeWorkingDirectory(pathname);
+                ftpClient.storeFile(fileupload.getFileNewName(), bufferedInputStream);
+                /*ftpClient.logout();*/
+                fileuploadDao.insert(fileupload);
+                result = ResponseResult.build().success(fileupload, "上传成功");
+            }
         } catch (Exception e) {
+            // 出现异常从FTP池中移除有问题的ftpClient
+            releaseFTPClientWithException(ftpClient);
             log.error("{} {}", "上传文件失败", fileupload);
             e.printStackTrace();
             result = ResponseResult.build().failed("上传FTP失败");
         } finally {
-            releaseFTPClient(ftpClient);
-            if(Objects.nonNull(inputStream)){
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+//            releaseFTPClientWithOutPendingCommand(ftpClient);
+            releaseFTPClientWithPendingCommand(ftpClient);
         }
         return result;
     }
 
+    @Override
     public List<ResponseResult> upload(List<MultipartFile> multipartFileList, HttpServletRequest request) {
         return multipartFileList.parallelStream()
-                .filter(t -> org.springframework.util.StringUtils.hasLength(t.getOriginalFilename()))
+                .filter(t -> StringUtils.hasLength(t.getOriginalFilename()))
                 .map(multipartFile -> {
                     Fileupload fileupload = getFileupload(multipartFile, request);
                     ResponseResult responseResult = null;
@@ -160,63 +171,56 @@ public class FTPServiceImpl implements IFTPService {
      * @param pathname 路径名
      * @param filename 文件名
      * @param realName 原文件名
-     * @return response HttpServletResponse
      * @author hanmeng1
      * @since 2019/2/21 19:11
      */
-    public void download(String pathname, String filename, String realName, HttpServletResponse response) throws IOException {
-        BufferedInputStream bufferedInputStream = null;
-        BufferedOutputStream bufferedOutputStream = null;
-        InputStream inputStream = null;
-        FTPClient ftpClient = ftpClient();
-        if (!reachable(ftpClient)) {
-            log.error("连接FTP服务失败");
-        }
+    @Override
+    public void download(String pathname, String filename, String realName, HttpServletResponse response) {
+        FTPClient ftpClient = null;
         try {
+            ftpClient = ftpPool.borrowObject();
+            if (!reachable(ftpClient)) {
+                throw new ConnectException("连接FTP服务失败");
+            }
             log.info("开始下载文件{}/{}", pathname, filename);
+            // 设置文件类型为二进制
             ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
             ftpClient.enterLocalPassiveMode();
             ftpClient.changeWorkingDirectory(pathname);
-            FTPFile[] ftpFiles = ftpClient.listFiles();
+            FTPFile[] ftpFiles = ftpClient.listFiles(pathname);
             for (FTPFile file : ftpFiles) {
                 if (filename.equalsIgnoreCase(file.getName())) {
-                    inputStream = ftpClient.retrieveFileStream(pathname + "/" + filename);
-                }
-            }
-            if (inputStream != null) {
-                bufferedInputStream = new BufferedInputStream(inputStream);
-                bufferedOutputStream = new BufferedOutputStream(response.getOutputStream());
-                response.setHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(realName, MyCharset.DEFAULT_CHARSET_TEXT));
-                response.setContentType("application/octet-stream;charset=utf-8");
-                byte[] bytes = new byte[1024];
-                int n;
-                while ((n = bufferedInputStream.read(bytes)) != -1) {
-                    bufferedOutputStream.write(bytes, 0, n);
+                    try (InputStream inputStream = ftpClient.retrieveFileStream(pathname + FTP_PATH_SEPARATOR + filename)) {
+                        if (Objects.nonNull(inputStream)) {
+                            try (BufferedInputStream input = new BufferedInputStream(inputStream);
+                                 BufferedOutputStream output = new BufferedOutputStream(response.getOutputStream())) {
+                                response.setHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(realName, MyCharset.DEFAULT_CHARSET_TEXT));
+                                response.setContentType(CONTENTTYPE);
+                                byte[] bytes = new byte[1024];
+                                int n;
+                                while ((n = input.read(bytes)) != -1) {
+                                    output.write(bytes, 0, n);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         } catch (Exception e) {
             log.error("下载文件失败");
             e.printStackTrace();
+            releaseFTPClientWithException(ftpClient);
         } finally {
-            if (bufferedInputStream != null) {
-                bufferedInputStream.close();
-            }
-            if (bufferedOutputStream != null) {
-                bufferedOutputStream.close();
-            }
-            if (inputStream != null) {
-                inputStream.close();
-            }
-            releaseFTPClient(ftpClient);
+            releaseFTPClientWithPendingCommand(ftpClient);
         }
     }
 
     /**
      * 创建FTP目录
      *
-     * @param dir
-     * @return
-     * @throws IOException
+     * @param dir 目录
+     * @return true:成功 false:失败
+     * @throws IOException IOException
      */
     private boolean makeDirectory(String dir, FTPClient ftpClient) throws IOException {
         return ftpClient.makeDirectory(dir);
@@ -224,14 +228,11 @@ public class FTPServiceImpl implements IFTPService {
 
     /**
      * 创建FTP多层目录文件，如果有ftp服务器已存，则不创建，否则，则创建
-     *
-     * @param remote
-     * @throws IOException
      */
     private void createDirecroty(String remote, FTPClient ftpClient) throws IOException {
         String directory = remote + FTP_PATH_SEPARATOR;
         // 如果远程目录不存在,则递归创建远程服务器目录
-        if (!directory.equalsIgnoreCase("/") && !changeWorkingDirectory(directory, ftpClient)) {
+        if (!directory.equalsIgnoreCase(FTP_PATH_SEPARATOR) && !changeWorkingDirectory(directory, ftpClient)) {
             int start;
             int end;
             if (directory.startsWith(FTP_PATH_SEPARATOR)) {
@@ -242,7 +243,7 @@ public class FTPServiceImpl implements IFTPService {
             end = directory.indexOf(FTP_PATH_SEPARATOR, start);
             String path = MyStringUtils.EMPTY;
             StringBuilder paths = new StringBuilder(MyStringUtils.EMPTY);
-            while (true) {
+            for (; ; ) {
                 String subDirectory = new String(remote.substring(start, end).getBytes(MyCharset.DEFAULT_CHARSET.name()), MyCharset.DEFAULT_CHARSET.name());
                 path = path + FTP_PATH_SEPARATOR + subDirectory;
                 if (!existFile(path, ftpClient)) {
@@ -265,7 +266,14 @@ public class FTPServiceImpl implements IFTPService {
         }
     }
 
-    //改变目录路径
+
+    /**
+     * 改变目录路径
+     *
+     * @param directory 路径
+     * @param ftpClient ftpClient
+     * @return 是否切换成功
+     */
     private boolean changeWorkingDirectory(String directory, FTPClient ftpClient) {
         boolean flag = true;
         try {
@@ -292,7 +300,7 @@ public class FTPServiceImpl implements IFTPService {
     private boolean existFile(String path, FTPClient ftpClient) throws IOException {
         boolean flag = false;
         FTPFile[] ftpFileArr = ftpClient.listFiles(path);
-        if (ftpFileArr.length > 0) {
+        if (!ObjectUtils.isEmpty(ftpFileArr)) {
             flag = true;
         }
         return flag;
@@ -308,63 +316,99 @@ public class FTPServiceImpl implements IFTPService {
      * @author hanmeng
      * @since 2019/1/25 18:41
      */
+    @Override
     public ResponseResult deleteFile(String id, String pathname, String filename) {
         ResponseResult responseResult;
-        FTPClient ftpClient = ftpClient();
-        if (!reachable(ftpClient)) {
-            responseResult = ResponseResult.build().failed("连接FTP服务失败");
-        }
+        FTPClient ftpClient = null;
         try {
+            ftpClient = ftpPool.borrowObject();
+            if (!reachable(ftpClient)) {
+                return ResponseResult.build().failed("连接FTP服务失败");
+            }
             ftpClient.changeWorkingDirectory(pathname);
             ftpClient.dele(filename);
-            ftpClient.logout();
             responseResult = ResponseResult.build().success("删除文件成功");
             fileuploadDao.deleteById(id);
         } catch (Exception e) {
             responseResult = ResponseResult.build().failed("删除文件失败");
+            releaseFTPClientWithException(ftpClient);
             e.printStackTrace();
         } finally {
-            releaseFTPClient(ftpClient);
+            releaseFTPClientWithOutPendingCommand(ftpClient);
         }
         return responseResult;
     }
 
-    private void releaseFTPClient(FTPClient ftpClient) {
-        if (ftpClient.isConnected()) {
-            try {
-                ftpClient.disconnect();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+    /**
+     * 正常上传完成释放连接
+     *
+     * @param ftpClient FTP客户端对象
+     */
+    private void releaseFTPClientWithOutPendingCommand(FTPClient ftpClient) {
+        if (Objects.nonNull(ftpClient)) {
+            ftpPool.returnObject(ftpClient);
         }
     }
 
+    /**
+     * 下载完成时,正常释放ftp连接
+     *
+     * @param ftpClient FTP客户端对象
+     */
+    private void releaseFTPClientWithPendingCommand(FTPClient ftpClient) {
+        ftpPool.returnObject(ftpClient);
+        try {
+            if (ftpClient.isConnected()) {
+                ftpClient.completePendingCommand();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
+    /**
+     * 异常时 断开FTP连接 将异常的FTPClient移除连接池
+     *
+     * @param ftpClient FTP客户端对象
+     */
+    private void releaseFTPClientWithException(FTPClient ftpClient) {
+        try {
+            //从连接池中移除异常的连接
+            ftpPool.invalidateObject(ftpClient);
+            if (ftpClient.isConnected()) {
+                //断开连接
+                ftpClient.disconnect();
+            }
+        } catch (Exception e1) {
+            e1.printStackTrace();
+        }
+    }
+
+    /**
+     * 将multipartFile对象转换成Fileupload
+     *
+     * @param multipartFile 前端触底的multipartFile对象
+     * @return request request
+     * @author hanmeng1
+     * @since 2019/3/29 8:50
+     */
     private Fileupload getFileupload(MultipartFile multipartFile, HttpServletRequest request) {
-        Fileupload fileupload = new Fileupload();
-        String contextPath = request.getContextPath().replaceFirst("/", "");//根路径名
+        //根路径名
+        String contextPath = request.getContextPath().replaceFirst(FTP_PATH_SEPARATOR, MyStringUtils.EMPTY);
         String contentType = multipartFile.getContentType();
-        String originalFilename = multipartFile.getOriginalFilename();//获取文件名
-        String suffixName = originalFilename.substring(originalFilename.lastIndexOf("."));
-        String fileType = FilenameUtils.getExtension(originalFilename);//获取文件类型
-        String newFileName = IdGenerator.randomUUID() + suffixName;//生成新的文件名
+        //获取原始文件名
+        String originalFilename = multipartFile.getOriginalFilename();
+        String suffixName = originalFilename != null ? Objects.requireNonNull(originalFilename).substring(originalFilename.lastIndexOf(".")) : null;
+        //获取文件类型
+        String fileType = FilenameUtils.getExtension(originalFilename);
+        //生成新的文件名
+        String newFileName = IdGenerator.randomUUID() + suffixName;
         String remoteAddr = request.getRemoteAddr();
-        String ftpPath = Joiner.on("/").join(
-                ftpProperties.getPath(),
-                MyDateTimeUtils.getCurrentYear(),
-                MyDateTimeUtils.getCurrentMonth(),
-                MyDateTimeUtils.getCurrentDay());
-        fileupload.setContentType(contentType);
-        fileupload.setContextPath(contextPath);
-        fileupload.setFileType(fileType);
-        fileupload.setFileOldName(originalFilename);
-        fileupload.setFileNewName(newFileName);
-        fileupload.setCreateTime(MyDateTimeUtils.getCurrentDateTimeStr());
-        fileupload.setUserId("");
-        fileupload.setUserIp(remoteAddr);
-        fileupload.setLocation(FilenameUtils.normalize(ftpPath, true));
-        fileupload.setServerType(FileUpLoadEnum.FTP.value());
-        fileupload.setId(IdGenerator.randomUUID());
-        return fileupload;
+        String ftpPath = Joiner.on(FTP_PATH_SEPARATOR).join(ftpProperties.getPath(), MyDateTimeUtils.getCurrentYear(), MyDateTimeUtils.getCurrentMonth(), MyDateTimeUtils.getCurrentDay());
+        return Fileupload.builder().contentType(contentType).contextPath(contextPath)
+                .fileType(fileType).fileOldName(originalFilename)
+                .fileNewName(newFileName).createTime(MyDateTimeUtils.getCurrentDateTimeStr())
+                .userId("").userIp(remoteAddr).location(FilenameUtils.normalize(ftpPath, true))
+                .serverType(FileUpLoadEnum.FTP.value()).id(IdGenerator.randomUUID()).build();
     }
 }

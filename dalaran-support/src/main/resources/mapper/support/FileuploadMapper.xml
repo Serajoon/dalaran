@@ -16,22 +16,23 @@
     <result column="create_time" property="createTime" jdbcType="TIMESTAMP" />
   </resultMap>
   <sql id="Base_Column_List" >
-    id, file_old_name, file_new_name, contextPath, contentype, fileType, location, servertype,
+    id, file_old_name, file_new_name, contextPath, contenttype, fileType, location, servertype,
     userid, userip, create_time
   </sql>
 
   <select id="findById" resultMap="BaseResultMap" parameterType="java.lang.String" >
     select
     <include refid="Base_Column_List" />
-    from fileupload
+    from SYS_FILE
     where id = #{id}
   </select>
   <delete id="deleteById" parameterType="java.lang.String" >
-    delete from fileupload
+    delete from SYS_FILE
     where id = #{id}
   </delete>
+
   <insert id="insert" parameterType="com.serajoon.dalaran.support.ftp.model.Fileupload" >
-    insert into fileupload (id,file_old_name, file_new_name, contextPath,
+    insert into SYS_FILE (id,file_old_name, file_new_name, contextPath,
       contenttype, fileType, location, 
       servertype, userid, userip, 
       create_time)
