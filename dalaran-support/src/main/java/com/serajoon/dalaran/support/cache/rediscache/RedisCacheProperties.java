@@ -11,8 +11,12 @@ import java.util.Map;
  * application.ymlredis属性配置
  * <pre>
  * rediscache:
- *   # redis过期时间设置,默认是1天
+ *   # redis过期时间设置,默认是30分钟
+ *   # 1小时
  *   time-to-live: 1h
+ *   # 5分钟
+ *   customTimeToLive:
+ *     config-user: 5m
  * </pre>
  *
  * @author hanmeng
@@ -26,14 +30,14 @@ public class RedisCacheProperties {
     static final String REDISCACHE_PREFIX = "rediscache";
 
     /**
-     * redis过期时间,默认1天
+     * 不配置的话,默认redis过期时间,默认30分钟
      */
-    private Duration timeToLive = Duration.ofDays(1);
+    private Duration timeToLive = Duration.ofMinutes(30);
 
     /**
-     *
+     * 自定义缓存过期时间
      */
-    private Map<String, Duration> favorite;
+    private Map<String, Duration> customTimeToLive;
 
 
 }
