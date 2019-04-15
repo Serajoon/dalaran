@@ -62,7 +62,7 @@ public class RedisCacheConfig extends CachingConfigurerSupport {
     }
 
 
-    @Bean
+    @Bean("redisCacheManager")
     @SuppressWarnings({"all"})
     CacheManager redisCacheManager(RedisConnectionFactory redisConnectionFactory) {
         //自定义的缓存过期时间
