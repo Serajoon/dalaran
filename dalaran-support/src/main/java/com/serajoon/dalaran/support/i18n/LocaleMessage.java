@@ -12,7 +12,7 @@ import java.util.Locale;
  * @since  2019/4/24 8:37
  */
 @Component
-public class LocaleMessageService {
+public class LocaleMessage {
 
     @Resource
     private MessageSource messageSource;
