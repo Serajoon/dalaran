@@ -11,10 +11,8 @@ import java.lang.annotation.*;
 public @interface ApiVersion {
     /**
      * 自定义RestApi版本号注解,可以标注在类或者方法上,运行时环境使用
-     * <p>
-     * 例如 @RequestMapping("/api/{version}/users")
      *
-     * @return
+     * @return version
      */
     int value();
 }
