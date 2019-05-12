@@ -42,9 +42,11 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
 
     /**
      * 根据request查找匹配到的筛选条件
+     * 如果传入的版本号大于等于配置的版本号,则返回配置的版本号
+     * 如果传入的版本号小于配置的版本号,则匹配失败
      *
-     * @param httpServletRequest
-     * @return
+     * @param httpServletRequest httpServletRequest
+     * @return ApiVersionCondition
      */
     @Nullable
     @Override
@@ -54,17 +56,18 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
             //取第一个匹配
             Integer version = Integer.valueOf(m.group(1));
             if (version >= this.apiVersion) {
+                // 如果请求的版本号大于等于配置版本号,则满足
                 return this;
             }
         }
-        return this;
+        return null;
     }
 
     /**
      * 不同筛选条件比较,用于排序,优先匹配最新的版本号
      *
-     * @param apiVersionCondition
-     * @param httpServletRequest
+     * @param apiVersionCondition 自定义ApiVersionCondition对象
+     * @param httpServletRequest  httpServletRequest
      * @return
      */
     @Override
