@@ -31,6 +31,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Configuration
 @AutoConfigureAfter(RedisAutoConfiguration.class)
@@ -68,9 +69,11 @@ public class RedisCacheConfig extends CachingConfigurerSupport {
         //自定义的缓存过期时间
         Map<String, Duration> customTimeToLive = redisCacheProperties.getCustomTimeToLive();
         Map<String, RedisCacheConfiguration> redisCacheConfigurationMap = new HashMap<>();
-        customTimeToLive.forEach((k, v) -> {
-            RedisCacheConfiguration redisCacheConfiguration = redisCacheConfigurationFactory(v);
-            redisCacheConfigurationMap.put(k.replaceAll("-", ":"), redisCacheConfiguration);
+        Optional.ofNullable(customTimeToLive).ifPresent(t -> {
+            t.forEach((k, v) -> {
+                RedisCacheConfiguration redisCacheConfiguration = redisCacheConfigurationFactory(v);
+                redisCacheConfigurationMap.put(k.replaceAll("-", ":"), redisCacheConfiguration);
+            });
         });
         // 默认的缓存过期时间 默认30分钟
         RedisCacheWriter redisCacheWriter = RedisCacheWriter.nonLockingRedisCacheWriter(redisConnectionFactory);
@@ -91,15 +94,18 @@ public class RedisCacheConfig extends CachingConfigurerSupport {
             public void handleCacheGetError(@NotNull RuntimeException exception, @NotNull Cache cache, @NotNull Object key) {
                 log.error("cache get error, cacheName:{}, key:{}, msg:", cache.getName(), key, exception);
             }
+
             @Override
             public void handleCachePutError(@NotNull RuntimeException exception, @NotNull Cache cache, @NotNull Object key, Object value) {
                 log.error("cache put error, cacheName:{}, key:{}, msg:", cache.getName(), key, exception);
 
             }
+
             @Override
             public void handleCacheEvictError(@NotNull RuntimeException exception, @NotNull Cache cache, @NotNull Object key) {
                 log.error("cache evict error, cacheName:{}, key:{}, msg:", cache.getName(), key, exception);
             }
+
             @Override
             public void handleCacheClearError(@NotNull RuntimeException exception, @NotNull Cache cache) {
                 log.error("cache clear error, cacheName:{}, msg:", cache.getName(), exception);
@@ -109,6 +115,7 @@ public class RedisCacheConfig extends CachingConfigurerSupport {
 
     /**
      * 返回redis的值序列化对象
+     *
      * @return
      */
     private RedisSerializer getValueSerializer() {
