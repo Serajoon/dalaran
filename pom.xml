@@ -37,7 +37,7 @@
         <mysql.connector>5.1.26</mysql.connector>
         <druid.version>1.1.10</druid.version>
         <fastjson.version>1.2.47</fastjson.version>
-        <guava.version>25.1-jre</guava.version>
+        <guava.version>29.0-jre</guava.version>
         <rocketmq.version>4.2.0</rocketmq.version>
         <swagger2.version>2.7.0</swagger2.version>
         <activiti.springboot.version>6.0.0</activiti.springboot.version>
