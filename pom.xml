@@ -44,7 +44,7 @@
         <servlet.version>2.5</servlet.version>
         <lombok.version>1.16.22</lombok.version>
         <caffeine.version>2.6.2</caffeine.version>
-        <kotlin.version>1.3.0</kotlin.version>
+        <kotlin.version>1.6.0</kotlin.version>
         <jackson.module.kotlin>2.9.6</jackson.module.kotlin>
         <commons-pool2.version>2.6.1</commons-pool2.version>
         <kafka.version>2.2.0.RELEASE</kafka.version>
